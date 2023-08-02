@@ -12,37 +12,20 @@ const SeatBooking = () => {
   const [numSeatsToBook, setNumSeatsToBook] = useState(1);
   const [bookedSeats, setBookedSeats] = useState([]);
   const [selectedSeats, setSelectedSeats] = useState([]);
+  const [message, setMessage] = useState('');
 
   const bookSeats = () => {
     const newSeats = [...seats];
     let seatsToBook = numSeatsToBook;
     let newBookedSeats = [];
 
-    const rowIndex = availableSeats.findIndex(row => row >= numSeatsToBook);
-    if (rowIndex !== -1) {
-      let booked = 0;
-      for (let seat = 0; seat < newSeats[rowIndex].length; seat++) {
-        if (booked === numSeatsToBook) break;
-        if (newSeats[rowIndex][seat] === 0) {
-          newSeats[rowIndex][seat] = 1;
-          newBookedSeats.push(`Seat ${rowIndex + 1}${String.fromCharCode(65 + seat)}`);
-          booked++;
-        }
-      }
-      seatsToBook -= booked;
-    }
-
-    if (seatsToBook > 0) {
-      for (let row = 0; row < newSeats.length; row++) {
+    for (let rowIndex = 0; rowIndex < newSeats.length; rowIndex++) {
+      for (let seatIndex = 0; seatIndex < newSeats[rowIndex].length; seatIndex++) {
         if (seatsToBook === 0) break;
-        if (row === rowIndex) continue;
-        for (let seat = 0; seat < newSeats[row].length; seat++) {
-          if (seatsToBook === 0) break;
-          if (newSeats[row][seat] === 0) {
-            newSeats[row][seat] = 1;
-            newBookedSeats.push(`Seat ${row + 1}${String.fromCharCode(65 + seat)}`);
-            seatsToBook--;
-          }
+        if (newSeats[rowIndex][seatIndex] === 0) {
+          newSeats[rowIndex][seatIndex] = 1;
+          newBookedSeats.push(`Seat ${String.fromCharCode(65 + seatIndex)}${rowIndex + 1}`);
+          seatsToBook--;
         }
       }
     }
@@ -51,23 +34,31 @@ const SeatBooking = () => {
     setAvailableSeats(newSeats.map(row => row.filter(seat => seat === 0).length));
     setBookedSeats(newBookedSeats);
     setSelectedSeats([]);
+
+    if (seatsToBook > 0) {
+      setMessage(`Only ${numSeatsToBook - seatsToBook} seats available. Can book ${numSeatsToBook - seatsToBook} seats.`);
+    } else {
+      setMessage('');
+    }
   };
 
   const handleReset = () => {
     localStorage.clear();
     setSeats(initialSeats);
-    setAvailableSeats([]);
+    setAvailableSeats(initialSeats.map(row => row.length)); // Reset the available seats to the initial values
     setBookedSeats([]);
     setSelectedSeats([]);
+    setMessage('');
   };
 
   useEffect(() => {
     localStorage.setItem('bookedSeats', JSON.stringify(seats));
+    setAvailableSeats(seats.map(row => row.filter(seat => seat === 0).length)); // Update available seats when 'seats' state changes
   }, [seats]);
 
   return (
-    <div className="flex">
-      <div className="w-1/2 p-4">
+    <div className="flex flex-col md:flex-row">
+      <div className="w-full md:w-1/2 p-4">
         <h1 className="text-2xl font-bold mb-4">Train Seat Booking</h1>
         <div className="mb-4">
           <label htmlFor="numSeats" className="block mb-2">Enter the number of seats to book:</label>
@@ -87,6 +78,7 @@ const SeatBooking = () => {
             Book Seats
           </button>
         </div>
+        {message && <p className="text-red-600 mb-4">{message}</p>}
         {bookedSeats.length > 0 && (
           <div>
             <h2 className="text-xl font-bold mb-2">Booked Seats:</h2>
@@ -104,24 +96,31 @@ const SeatBooking = () => {
           Reset
         </button>
       </div>
-      <div className="w-1/2 p-4">
+      <div className="w-full md:w-1/2 p-4">
         <h2 className="text-xl font-bold mb-4">Seat Availability:</h2>
-        <div className="seats-grid grid grid-cols-7 gap-2">
+        <div className="flex flex-wrap justify-center">
           {seats.map((row, rowIndex) => (
-            row.map((seat, seatIndex) => (
-              <div
-                key={`${rowIndex}-${seatIndex}`}
-                className={`border rounded h-8 w-8 flex items-center justify-center cursor-pointer ${seat === 0 ? 'bg-green-200 hover:bg-green-300' : 'bg-gray-400'} ${selectedSeats.includes(`${rowIndex}-${seatIndex}`) ? 'bg-blue-200' : ''}`}
-                onClick={() => {
-                  if (seat === 0 && !selectedSeats.includes(`${rowIndex}-${seatIndex}`)) {
-                    setSelectedSeats(prevSeats => [...prevSeats, `${rowIndex}-${seatIndex}`]);
-                  }
-                }}
-              />
-            ))
+            <div key={rowIndex} className="coach-container mx-4 mb-8">
+              <h3 className="text-lg font-bold mb-2">Coach {rowIndex + 1}</h3>
+              <div className="seats-grid grid grid-cols-7 gap-2">
+                {row.map((seat, seatIndex) => (
+                  <div
+                    key={`${rowIndex}-${seatIndex}`}
+                    className={`border rounded h-8 w-8 flex items-center justify-center cursor-pointer ${seat === 0 ? 'bg-green-200 hover:bg-green-300' : 'bg-gray-400'} ${selectedSeats.includes(`${rowIndex}-${seatIndex}`) ? 'bg-blue-200' : ''}`}
+                    onClick={() => {
+                      if (seat === 0 && !selectedSeats.includes(`${rowIndex}-${seatIndex}`)) {
+                        setSelectedSeats(prevSeats => [...prevSeats, `${rowIndex}-${seatIndex}`]);
+                      }
+                    }}
+                  >
+                    {seat === 1 ? String.fromCharCode(65 + seatIndex) + (rowIndex + 1) : ''}
+                  </div>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
-        <p className="mt-4">
+        <p className="mt-4 text-center">
           Total available seats: {availableSeats.reduce((acc, curr) => acc + curr, 0)}
         </p>
       </div>

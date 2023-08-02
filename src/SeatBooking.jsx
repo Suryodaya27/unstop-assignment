@@ -15,6 +15,11 @@ const SeatBooking = () => {
   const [message, setMessage] = useState('');
 
   const bookSeats = () => {
+    if (numSeatsToBook > 7) {
+      setMessage('You can only book up to 7 seats at a time.');
+      return;
+    }
+
     const newSeats = [...seats];
     let seatsToBook = numSeatsToBook;
     let newBookedSeats = [];
@@ -34,12 +39,7 @@ const SeatBooking = () => {
     setAvailableSeats(newSeats.map(row => row.filter(seat => seat === 0).length));
     setBookedSeats(newBookedSeats);
     setSelectedSeats([]);
-
-    if (seatsToBook > 0) {
-      setMessage(`Only ${numSeatsToBook - seatsToBook} seats available. Can book ${numSeatsToBook - seatsToBook} seats.`);
-    } else {
-      setMessage('');
-    }
+    setMessage('');
   };
 
   const handleReset = () => {
@@ -66,7 +66,7 @@ const SeatBooking = () => {
             type="number"
             id="numSeats"
             min="1"
-            max="80"
+            max="7" // Change the max value to 7
             className="border rounded p-2 w-full"
             value={numSeatsToBook}
             onChange={(e) => setNumSeatsToBook(parseInt(e.target.value))}

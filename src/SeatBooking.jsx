@@ -2,17 +2,24 @@ import React, { useState, useEffect } from 'react';
 import 'tailwindcss/tailwind.css';
 
 const SeatBooking = () => {
-  const initialSeats = Array(11)
-    .fill(Array(7).fill(0))
-    .concat([Array(3).fill(0)]);
+  const totalSeats = 80; // Total of 80 seats
+  const seatsPerRow = 7;
+  const numRows = Math.ceil(totalSeats / seatsPerRow);
+  const lastRowSeats = totalSeats % seatsPerRow; // Number of seats in the last row
   const [seats, setSeats] = useState(
-    JSON.parse(localStorage.getItem('bookedSeats')) || initialSeats
+    JSON.parse(localStorage.getItem('bookedSeats')) || Array(totalSeats).fill(0)
   );
-  const [availableSeats, setAvailableSeats] = useState([]);
+  const [availableSeats, setAvailableSeats] = useState(totalSeats);
   const [numSeatsToBook, setNumSeatsToBook] = useState(1);
   const [bookedSeats, setBookedSeats] = useState([]);
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [message, setMessage] = useState('');
+
+  const getSeatLabel = (seatIndex) => {
+    const row = Math.floor(seatIndex / seatsPerRow) + 1;
+    const seatLetter = String.fromCharCode(65 + (seatIndex % seatsPerRow));
+    return `${seatLetter}${row}`;
+  };
 
   const bookSeats = () => {
     if (numSeatsToBook > 7) {
@@ -24,19 +31,17 @@ const SeatBooking = () => {
     let seatsToBook = numSeatsToBook;
     let newBookedSeats = [];
 
-    for (let rowIndex = 0; rowIndex < newSeats.length; rowIndex++) {
-      for (let seatIndex = 0; seatIndex < newSeats[rowIndex].length; seatIndex++) {
-        if (seatsToBook === 0) break;
-        if (newSeats[rowIndex][seatIndex] === 0) {
-          newSeats[rowIndex][seatIndex] = 1;
-          newBookedSeats.push(`Seat ${String.fromCharCode(65 + seatIndex)}${rowIndex + 1}`);
-          seatsToBook--;
-        }
+    for (let seatIndex = 0; seatIndex < newSeats.length; seatIndex++) {
+      if (seatsToBook === 0) break;
+      if (newSeats[seatIndex] === 0) {
+        newSeats[seatIndex] = 1;
+        newBookedSeats.push(getSeatLabel(seatIndex));
+        seatsToBook--;
       }
     }
 
     setSeats(newSeats);
-    setAvailableSeats(newSeats.map(row => row.filter(seat => seat === 0).length));
+    setAvailableSeats(newSeats.filter(seat => seat === 0).length);
     setBookedSeats(newBookedSeats);
     setSelectedSeats([]);
     setMessage('');
@@ -44,8 +49,8 @@ const SeatBooking = () => {
 
   const handleReset = () => {
     localStorage.clear();
-    setSeats(initialSeats);
-    setAvailableSeats(initialSeats.map(row => row.length)); // Reset the available seats to the initial values
+    setSeats(Array(totalSeats).fill(0));
+    setAvailableSeats(totalSeats);
     setBookedSeats([]);
     setSelectedSeats([]);
     setMessage('');
@@ -53,12 +58,12 @@ const SeatBooking = () => {
 
   useEffect(() => {
     localStorage.setItem('bookedSeats', JSON.stringify(seats));
-    setAvailableSeats(seats.map(row => row.filter(seat => seat === 0).length)); // Update available seats when 'seats' state changes
+    setAvailableSeats(seats.filter(seat => seat === 0).length);
   }, [seats]);
 
   return (
-    <div className="flex flex-col md:flex-row">
-      <div className="w-full md:w-1/2 p-4">
+    <div className="flex flex-col md:flex-row h-screen bg-gray-100">
+      <div className="w-full md:w-1/2 p-4 bg-white shadow-lg rounded-lg">
         <h1 className="text-2xl font-bold mb-4">Train Seat Booking</h1>
         <div className="mb-4">
           <label htmlFor="numSeats" className="block mb-2">Enter the number of seats to book:</label>
@@ -66,14 +71,14 @@ const SeatBooking = () => {
             type="number"
             id="numSeats"
             min="1"
-            max="7" // Change the max value to 7
+            max="7"
             className="border rounded p-2 w-full"
             value={numSeatsToBook}
             onChange={(e) => setNumSeatsToBook(parseInt(e.target.value))}
           />
           <button
             onClick={bookSeats}
-            className="bg-blue-500 text-white rounded px-4 py-2 mt-2"
+            className="bg-blue-500 text-white rounded px-4 py-2 mt-2 hover:bg-blue-600"
           >
             Book Seats
           </button>
@@ -82,46 +87,44 @@ const SeatBooking = () => {
         {bookedSeats.length > 0 && (
           <div>
             <h2 className="text-xl font-bold mb-2">Booked Seats:</h2>
-            <ul>
+            <ul className="list-disc pl-6">
               {bookedSeats.map((seat, index) => (
-                <li key={index}>{seat}</li>
+                <li key={index} className="mb-1">{seat}</li>
               ))}
             </ul>
           </div>
         )}
         <button
           onClick={handleReset}
-          className="bg-red-500 text-white rounded px-4 py-2 mt-4"
+          className="bg-red-500 text-white rounded px-4 py-2 mt-4 hover:bg-red-600"
         >
           Reset
         </button>
       </div>
-      <div className="w-full md:w-1/2 p-4">
+      <div className="w-full md:w-1/2 p-4 flex flex-col justify-center items-center">
         <h2 className="text-xl font-bold mb-4">Seat Availability:</h2>
-        <div className="flex flex-wrap justify-center">
-          {seats.map((row, rowIndex) => (
-            <div key={rowIndex} className="coach-container mx-4 mb-8">
-              <h3 className="text-lg font-bold mb-2">Coach {rowIndex + 1}</h3>
-              <div className="seats-grid grid grid-cols-7 gap-2">
-                {row.map((seat, seatIndex) => (
-                  <div
-                    key={`${rowIndex}-${seatIndex}`}
-                    className={`border rounded h-8 w-8 flex items-center justify-center cursor-pointer ${seat === 0 ? 'bg-green-200 hover:bg-green-300' : 'bg-gray-400'} ${selectedSeats.includes(`${rowIndex}-${seatIndex}`) ? 'bg-blue-200' : ''}`}
-                    onClick={() => {
-                      if (seat === 0 && !selectedSeats.includes(`${rowIndex}-${seatIndex}`)) {
-                        setSelectedSeats(prevSeats => [...prevSeats, `${rowIndex}-${seatIndex}`]);
-                      }
-                    }}
-                  >
-                    {seat === 1 ? String.fromCharCode(65 + seatIndex) + (rowIndex + 1) : ''}
-                  </div>
-                ))}
-              </div>
-            </div>
+        <div className="grid grid-cols-7 gap-2">
+          {Array.from({ length: numRows }, (_, rowIndex) => (
+            Array.from({ length: rowIndex === numRows - 1 ? lastRowSeats : seatsPerRow }, (_, seatIndex) => {
+              const seatNumber = rowIndex * seatsPerRow + seatIndex;
+              return (
+                <div
+                  key={seatNumber}
+                  className={`border rounded h-12 w-12 flex items-center justify-center cursor-pointer ${seats[seatNumber] === 0 ? 'bg-green-200 hover:bg-green-300' : 'bg-gray-400'} ${selectedSeats.includes(seatNumber) ? 'bg-blue-200' : ''}`}
+                  onClick={() => {
+                    if (seats[seatNumber] === 0 && !selectedSeats.includes(seatNumber)) {
+                      setSelectedSeats(prevSeats => [...prevSeats, seatNumber]);
+                    }
+                  }}
+                >
+                  {seats[seatNumber] === 1 ? getSeatLabel(seatNumber) : ''}
+                </div>
+              );
+            })
           ))}
         </div>
         <p className="mt-4 text-center">
-          Total available seats: {availableSeats.reduce((acc, curr) => acc + curr, 0)}
+          Total available seats: {availableSeats}
         </p>
       </div>
     </div>
